@@ -132,7 +132,8 @@ exports.deleteTask = async (req, res) => {
 exports.getMyTasks = async (req, res) => {
   try {
     const tasks = await Task.find({ assignedTo: { $in: [req.user._id] } })
-      .populate("project", "name");
+      .populate("project", "name")
+      .populate("assignedTo", "name email");
     res.status(200).json({ tasks });
   } catch (error) {
     res.status(400).json({ message: error.message });

@@ -18,7 +18,8 @@ export default function Dashboard() {
 
   const fetchTasks = async () => {
     try {
-      const res = await axios.get('/tasks/my-tasks');
+      const endpoint = user?.role === 'Admin' ? '/tasks' : '/tasks/my-tasks';
+      const res = await axios.get(endpoint);
       setTasks(res.data.tasks);
     } catch (error) {
       console.error(error);
@@ -28,8 +29,8 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    if (user) fetchTasks();
+  }, [user]);
 
   const handleMarkDone = async (e, taskId) => {
     e.stopPropagation(); // Prevent modal from opening
@@ -53,12 +54,33 @@ export default function Dashboard() {
   const todoTasks = tasks.filter(t => t.status === 'To Do');
   const inProgressTasks = tasks.filter(t => t.status === 'In Progress');
   const doneTasks = tasks.filter(t => t.status === 'Done');
+  const overdueTasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'Done');
 
   return (
     <Layout>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500 mt-1">Overview of your assigned tasks</p>
+        <p className="text-slate-500 mt-1">Overview of {user?.role === 'Admin' ? 'all' : 'your assigned'} tasks</p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center">
+          <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Tasks</span>
+          <span className="text-3xl font-bold text-slate-900">{tasks.length}</span>
+        </div>
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center">
+          <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Pending</span>
+          <span className="text-3xl font-bold text-blue-600">{todoTasks.length + inProgressTasks.length}</span>
+        </div>
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center">
+          <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Completed</span>
+          <span className="text-3xl font-bold text-emerald-600">{doneTasks.length}</span>
+        </div>
+        <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col items-center justify-center">
+          <span className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Overdue</span>
+          <span className="text-3xl font-bold text-red-500">{overdueTasks.length}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
