@@ -83,8 +83,67 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* To Do Column */}
+      {user?.role === 'Admin' ? (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Task</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Project</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Assignees</th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {tasks.map(task => (
+                  <tr key={task._id} onClick={() => setSelectedTaskId(task._id)} className="hover:bg-slate-50 cursor-pointer transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">{task.title}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{task.project?.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${task.status === 'Done' ? 'bg-emerald-100 text-emerald-800' : task.status === 'In Progress' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-800'}`}>
+                        {task.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                      {task.assignedTo && task.assignedTo.length > 0 ? (
+                        <div className="flex -space-x-2">
+                          {task.assignedTo.slice(0, 3).map((assignee, idx) => (
+                            <div key={idx} className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-[10px] border-2 border-white shadow-sm" title={assignee.name || 'User'}>
+                              {assignee.name ? assignee.name.charAt(0) : 'U'}
+                            </div>
+                          ))}
+                          {task.assignedTo.length > 3 && (
+                            <div className="h-6 w-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-[10px] border-2 border-white shadow-sm">
+                              +{task.assignedTo.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic">Unassigned</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {task.status !== 'Done' && (
+                        <button 
+                          onClick={(e) => handleMarkDone(e, task._id)} 
+                          className="inline-flex items-center text-emerald-600 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1.5 rounded-lg transition-colors shadow-sm"
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" /> Mark Done
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {tasks.length === 0 && <p className="text-sm text-slate-400 text-center py-8">No tasks found</p>}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* To Do Column */}
         <div className="glass-panel p-6 bg-slate-50/50">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
@@ -232,6 +291,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      )}
 
       <TaskDetailsModal 
         taskId={selectedTaskId}
