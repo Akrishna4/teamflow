@@ -14,6 +14,17 @@ TeamFlow is a full-stack, production-ready MERN web application engineered for c
 
 ---
 
+## 🏛 Architecture Overview
+
+TeamFlow is designed as a secure, role-based ecosystem:
+
+1. **The Database Layer:** MongoDB Atlas stores our `User`, `Project`, `Task`, and `Notification` schemas. Tasks and Projects use **Mongoose Array References** (`[{ type: ObjectId }]`) to allow an infinite number of team members to be assigned to a single project or task.
+2. **The API Layer:** The Express backend acts as a strict firewall. Using JSON Web Tokens (JWT) stored in LocalStorage, the `authorize("Admin")` middleware ensures that only authenticated Admins can create projects, assign tasks, or change statuses. Members are blocked with `403 Forbidden` errors if they attempt to bypass the UI.
+3. **The Real-Time Engine:** When an Admin assigns a task to multiple users, the Express controller loops through the assignee array, saves isolated `Notification` documents, and immediately fires `socket.io` events to those specific users' connected browser instances.
+4. **The Client Layer:** The React UI intelligently reads the user's role from the `AuthContext`. If a standard Member logs in, React completely hides the "+ New Task" buttons and disables dropdowns, creating a seamless "View-Only" dashboard perfectly tailored to their assignments.
+
+---
+
 ## 🛠 Tech Stack
 
 **Frontend:**
