@@ -31,21 +31,25 @@ TeamFlow is a full-stack, production-ready MERN web application engineered for c
 
 ---
 
-## 🚀 Deployment Guide (Railway & Vercel)
+## 🚀 Deployment Guide (Render & Vercel)
 
 This application is decoupled into a `/client` and `/server` architecture, making it extremely easy to deploy as two separate microservices.
 
-### 1. Backend Deployment (Railway)
+### 1. Backend Deployment (Render.com)
+Since Render offers a fantastic free tier for Node.js web services, it is the perfect alternative to Railway.
 1. Push this repository to GitHub.
-2. Log into [Railway.app](https://railway.app/) and click **New Project** > **Deploy from GitHub repo**.
-3. Select this repository. Railway will detect the code.
-4. Go to the service **Settings**. Under **Root Directory**, type `/server`.
-5. Go to the **Variables** tab and add the following:
-   - `PORT` = `5001`
+2. Log into [Render.com](https://render.com/) and click **New > Web Service**.
+3. Connect your GitHub and select this repository.
+4. Configure the settings:
+   - **Root Directory:** `server`
+   - **Environment:** `Node`
+   - **Build Command:** `npm install`
+   - **Start Command:** `node server.js`
+5. Go to the **Environment Variables** section and add:
    - `MONGO_URI` = `mongodb+srv://<username>:<password>@cluster...` *(Your MongoDB Atlas URI)*
    - `JWT_SECRET` = `any_secure_random_string`
    - `CORS_ORIGIN` = *(Leave blank for now, you will update this after deploying the frontend!)*
-6. Railway will automatically run `npm install` and `npm start` (`node server.js`). Copy your live backend URL!
+6. Click **Create Web Service**. Copy your live `onrender.com` backend URL!
 
 ### 2. Frontend Deployment (Vercel)
 1. Log into [Vercel.com](https://vercel.com/) and click **Add New Project**.
@@ -53,9 +57,9 @@ This application is decoupled into a `/client` and `/server` architecture, makin
 3. In the project configuration, edit the **Root Directory** to be `client`.
 4. The Build Command should auto-detect as `npm run build`. The Install Command is `npm install`.
 5. Add the following Environment Variable:
-   - `VITE_API_URL` = `https://your-railway-backend-url.up.railway.app/api`
+   - `VITE_API_URL` = `https://your-render-backend-url.onrender.com/api`
 6. Click Deploy!
-7. **Crucial Final Step:** Copy your live Vercel URL. Go back to Railway, and update the `CORS_ORIGIN` variable to exactly match your Vercel URL.
+7. **Crucial Final Step:** Copy your live Vercel URL. Go back to your Render Dashboard, click your Web Service, go to the **Environment** tab, and update the `CORS_ORIGIN` variable to exactly match your Vercel URL.
 
 ---
 
