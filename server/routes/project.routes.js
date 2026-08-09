@@ -7,20 +7,26 @@ const {
   deleteProject,
 } = require("../controllers/project.controller");
 const { protect, authorize } = require("../middleware/auth");
+const { validate } = require("../middleware/validate");
+const {
+  createProjectRules,
+  updateProjectRules,
+} = require("../validators/project.validator");
 
 const router = express.Router();
 
-router.use(protect); // All project routes require authentication
+// All project routes require authentication
+router.use(protect);
 
 router
   .route("/")
   .get(getAllProjects)
-  .post(authorize("Admin"), createProject); // Only Admin can create projects
+  .post(authorize("Admin"), createProjectRules, validate, createProject);
 
 router
   .route("/:id")
   .get(getProject)
-  .put(authorize("Admin"), updateProject)
+  .put(authorize("Admin"), updateProjectRules, validate, updateProject)
   .delete(authorize("Admin"), deleteProject);
 
 module.exports = router;

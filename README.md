@@ -1,135 +1,215 @@
-# TeamFlow: Enterprise Task Manager
+# TeamFlow
 
-TeamFlow is a full-stack, production-ready MERN web application engineered for collaborative teams. It features strict Role-Based Access Control (RBAC), real-time WebSocket notifications, dynamic multi-user assignments, and a highly responsive Kanban-style dashboard.
+<p align="center">
+  <img src="https://via.placeholder.com/1200x400.png?text=TeamFlow+-+Enterprise+Project+Management" alt="TeamFlow Banner">
+</p>
 
----
+## Project Overview
 
-## 🌟 Key Features
+TeamFlow is a full-stack, production-ready MERN web application engineered for collaborative teams. Inspired by industry-leading tools like Jira and Linear, TeamFlow delivers a highly responsive, real-time environment for managing projects, assigning tasks, and maintaining team productivity.
 
-- **Ironclad Security (RBAC):** Backend APIs are heavily guarded. Admins have full CRUD permissions, while Members are locked into a seamless, read-only experience for viewing assigned data.
-- **Real-Time WebSockets:** Powered by `Socket.io`. Whenever an Admin creates a task, every assigned team member instantly receives a live browser notification without refreshing the page.
-- **Collaborative Assignments:** A dynamic, scrollable multi-select UI allows Admins to simultaneously assign infinite members to Projects and Tasks. Dashboards render smart overlapping avatar stacks to visually indicate collaboration size.
-- **Dynamic Kanban Dashboard:** Tasks are automatically sorted into "To Do", "In Progress", and "Done" columns.
-- **Admin Quick Actions:** Admins can hover over task cards to instantly "✓ Mark as Done" with a single click, complete with animated Toast success notifications.
+It features strict Role-Based Access Control (RBAC), real-time WebSocket notifications, dynamic multi-user assignments, and a lightning-fast Kanban-style dashboard.
 
----
+## Features
 
-## 🏛 Architecture Overview
+- **Authentication & RBAC**: Secure JWT-based authentication with distinct Admin and Member roles.
+- **My Tasks Dashboard**: A personalized, scalable dashboard categorizing tasks into Assigned, In Progress, Overdue, and Completed.
+- **Projects & Kanban**: Create projects, manage tasks via Kanban boards, set priorities, and assign team members.
+- **Real-Time Collaboration**: Instant Socket.IO synchronization for task updates, live comments, and notifications.
+- **Rich Task Details**: Comprehensive support for labels, sub-checklists, attachments, and rich-text activity history.
+- **Global Search**: Advanced `Meta+K` command palette for instantaneous cross-project querying.
+- **Automated Onboarding**: Zero-configuration demo seeder safely provisions realistic onboarding tasks for new users.
 
-TeamFlow is designed as a secure, role-based ecosystem:
+## Architecture
 
-1. **The Database Layer:** MongoDB Atlas stores our `User`, `Project`, `Task`, and `Notification` schemas. Tasks and Projects use **Mongoose Array References** (`[{ type: ObjectId }]`) to allow an infinite number of team members to be assigned to a single project or task.
-2. **The API Layer:** The Express backend acts as a strict firewall. Using JSON Web Tokens (JWT) stored in LocalStorage, the `authorize("Admin")` middleware ensures that only authenticated Admins can create projects, assign tasks, or change statuses. Members are blocked with `403 Forbidden` errors if they attempt to bypass the UI.
-3. **The Real-Time Engine:** When an Admin assigns a task to multiple users, the Express controller loops through the assignee array, saves isolated `Notification` documents, and immediately fires `socket.io` events to those specific users' connected browser instances.
-4. **The Client Layer:** The React UI intelligently reads the user's role from the `AuthContext`. If a standard Member logs in, React completely hides the "+ New Task" buttons and disables dropdowns, creating a seamless "View-Only" dashboard perfectly tailored to their assignments.
+TeamFlow is built as a **Modular Monolith**, prioritizing domain-driven design, robust service boundaries, and performance.
 
----
+```mermaid
+graph TD
+    Client[React SPA] <-->|REST API| Express[Express Server]
+    Client <-->|Socket.IO| Events[Event Bus]
+    Events <--> Express
+    Express <-->|Mongoose ODM| DB[(MongoDB Atlas)]
+    
+    subgraph Express Backend
+    Auth[Auth Service]
+    Projects[Project Service]
+    Tasks[Task Service]
+    Dash[Dashboard Service]
+    end
+```
 
-## 🛠 Tech Stack
+## Technology Stack
 
-**Frontend:**
-- React 19 + Vite
-- Tailwind CSS v4 (Vanilla, utility-first)
-- React Router DOM
-- Axios & Lucide React (Icons)
-- Socket.io-Client
+**Frontend**
+- React 19 + Vite 8
+- Tailwind CSS v4
+- React Router v7
+- Axios
+- Lucide Icons
 
-**Backend:**
+**Backend**
 - Node.js + Express 5
-- MongoDB + Mongoose 9
-- JSON Web Tokens (JWT) & HTTP-Only Cookies
-- Socket.io (Real-time engine)
+- MongoDB Atlas + Mongoose 9
+- Socket.IO
+- JWT (JSON Web Tokens)
+- Pino (Structured Logging)
 
----
+**DevOps & Testing**
+- Docker & Docker Compose
+- GitHub Actions CI/CD
+- Jest (Backend Integration)
+- Vitest + RTL (Frontend Unit)
+- Playwright (End-to-End)
 
-## 🚀 Deployment Guide (Render & Vercel)
+## Screenshots
 
-This application is decoupled into a `/client` and `/server` architecture, making it extremely easy to deploy as two separate microservices.
+<details>
+<summary><b>Login Screen</b></summary>
+<br>
+![Login Placeholder](https://via.placeholder.com/800x450.png?text=Login+Screen)
+</details>
 
-### 1. Backend Deployment (Render.com)
-Since Render offers a fantastic free tier for Node.js web services, it is the perfect alternative to Railway.
-1. Push this repository to GitHub.
-2. Log into [Render.com](https://render.com/) and click **New > Web Service**.
-3. Connect your GitHub and select this repository.
-4. Configure the settings:
-   - **Root Directory:** `server`
-   - **Environment:** `Node`
-   - **Build Command:** `npm install`
-   - **Start Command:** `node server.js`
-5. Go to the **Environment Variables** section and add:
-   - `MONGO_URI` = `mongodb+srv://<username>:<password>@cluster...` *(Your MongoDB Atlas URI)*
-   - `JWT_SECRET` = `any_secure_random_string`
-   - `CORS_ORIGIN` = *(Leave blank for now, you will update this after deploying the frontend!)*
-6. Click **Create Web Service**. Copy your live `onrender.com` backend URL!
+<details>
+<summary><b>My Tasks Dashboard</b></summary>
+<br>
+![Dashboard Placeholder](https://via.placeholder.com/800x450.png?text=My+Tasks+Dashboard)
+</details>
 
-### 2. Frontend Deployment (Vercel)
-1. Log into [Vercel.com](https://vercel.com/) and click **Add New Project**.
-2. Import this repository.
-3. In the project configuration, edit the **Root Directory** to be `client`.
-4. The Build Command should auto-detect as `npm run build`. The Install Command is `npm install`.
-5. Add the following Environment Variable:
-   - `VITE_API_URL` = `https://your-render-backend-url.onrender.com/api`
-6. Click Deploy!
-7. **Crucial Final Step:** Copy your live Vercel URL. Go back to your Render Dashboard, click your Web Service, go to the **Environment** tab, and update the `CORS_ORIGIN` variable to exactly match your Vercel URL.
+<details>
+<summary><b>Project Kanban View</b></summary>
+<br>
+![Project View Placeholder](https://via.placeholder.com/800x450.png?text=Project+View)
+</details>
 
----
+<details>
+<summary><b>Task Details Modal</b></summary>
+<br>
+![Task Details Placeholder](https://via.placeholder.com/800x450.png?text=Task+Details+Modal)
+</details>
 
-## 💻 Local Development Setup
+<details>
+<summary><b>Mobile Responsive View</b></summary>
+<br>
+![Mobile View Placeholder](https://via.placeholder.com/400x700.png?text=Mobile+View)
+</details>
 
-### 1. Backend Setup
-```bash
-cd server
-npm install
+## Folder Structure
+
 ```
-Create a `.env` file in the `/server` directory:
+teamflow/
+├── client/           # React Frontend Application
+│   ├── src/          # Source Code (Components, Pages, Context, Services)
+│   ├── public/       # Static Assets
+│   └── e2e/          # Playwright E2E Tests
+├── server/           # Express Backend Application
+│   ├── controllers/  # Route Handlers
+│   ├── services/     # Core Business Logic
+│   ├── models/       # Mongoose Schemas
+│   ├── docs/         # OpenAPI/Swagger Specifications
+│   └── __tests__/    # Jest Integration Tests
+├── .github/          # GitHub Actions CI/CD Workflows
+└── docker-compose.yml# Local Development & Orchestration
+```
+
+## Local Development
+
+### Prerequisites
+- Node.js (v22+)
+- MongoDB (v7+) or Docker
+- Git
+
+### Setup Instructions
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Akrishna4/teamflow.git
+   cd teamflow
+   ```
+
+2. **Environment Variables:**
+   Create `.env` files in both the root and `server/` directories based on the provided examples.
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Install Dependencies:**
+   ```bash
+   npm run install:all 
+   # Alternatively, install manually in root, server, and client folders
+   ```
+
+4. **Start Development Servers:**
+   ```bash
+   # Run both Frontend and Backend concurrently from the root
+   npm run dev
+   ```
+
+## Environment Variables
+
+**Backend (`server/.env`)**
 ```env
-PORT=5001
-MONGO_URI=mongodb://127.0.0.1:27017/team-task-manager
-JWT_SECRET=supersecretjwtkey12345
-CORS_ORIGIN=http://localhost:5173
+PORT=5000
+MONGODB_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/teamflow
+JWT_SECRET=your_super_secret_key_change_in_production
+CLIENT_URL=http://localhost:5173
 ```
-Start the backend server:
+
+**Frontend (`client/.env`)**
+```env
+VITE_API_URL=http://localhost:5000/api/v1
+VITE_SOCKET_URL=http://localhost:5000
+```
+
+## API Documentation
+
+TeamFlow features live OpenAPI (Swagger) documentation. Once the backend is running, navigate to:
+
+`http://localhost:5000/api/docs`
+
+This interface provides an interactive console for all REST endpoints, including authentication requirements, complex dashboard query parameters, pagination interfaces, and standard error responses.
+
+## Real-time Architecture
+
+Real-time synchronization is handled via a dedicated `EventBus` intertwined with `Socket.IO`. 
+- Clients subscribe to private socket rooms (`user_${userId}`).
+- When a service mutates a record (e.g., Task Update), the service alerts the Socket adapter.
+- The Socket adapter computes the impact radius (Assignees, Creators) and explicitly emits lightweight payloads exactly to the affected clients.
+- The React frontend receives the event and debounces it before executing a seamless background refresh, guaranteeing UI state sync without spamming the backend API.
+
+## Deployment
+
+TeamFlow is fully Dockerized and ready for PaaS deployment.
+
+### Backend (e.g., Render, Railway, Fly.io)
+The `server/` directory functions as an independent Node.js deployment. Ensure you define `PORT`, `MONGODB_URI`, `JWT_SECRET`, and `CLIENT_URL` in the environment configuration of your deployment provider.
+
+### Frontend (e.g., Vercel, Netlify)
+Deploy the `client/` directory as a standard Vite SPA. The build command is `npm run build` and the output directory is `dist/`. Map `VITE_API_URL` to your production backend URL.
+
+### Database (MongoDB Atlas)
+Ensure your production MongoDB cluster has network access allowed from your Backend PaaS provider. 
+
+## Testing
+
 ```bash
-npm run dev
+# Run backend integration tests (Jest)
+cd server && npm test
+
+# Run frontend component tests (Vitest)
+cd client && npm run test
+
+# Run End-to-End user journeys (Playwright)
+npm run test:e2e
 ```
 
-### 2. Frontend Setup
-```bash
-cd client
-npm install
-```
-Start the frontend server:
-```bash
-npm run dev
-```
+## Future Roadmap
 
----
+- [ ] **TypeScript Migration**: Full codebase migration for end-to-end type safety.
+- [ ] **Redis Caching Layer**: Offload read-heavy dashboard summarizations to Redis.
+- [ ] **React Query / Zustand**: Replace standard `useEffect` fetching with advanced server-state caching.
+- [ ] **Cursor-Based Pagination**: Migrate from offset `skip()` for infinite scaling on massive lists.
 
-## 🔌 API Documentation
+## License
 
-All routes (except Auth) require a valid JWT cookie. 
-
-### Auth (`/api/auth`)
-- `POST /register` - Register a new user
-- `POST /login` - Login user
-- `GET /me` - Get current user profile (Protected)
-- `POST /logout` - Clear cookies
-
-### Projects (`/api/projects`)
-- `GET /` - Get all projects (Protected)
-- `POST /` - Create a project (**Admin Only**)
-- `GET /:id` - Get project by ID (Protected)
-- `PUT /:id` - Update project (**Admin Only**)
-- `DELETE /:id` - Delete project (**Admin Only**)
-
-### Tasks (`/api/tasks`)
-- `GET /` - Get all tasks (Protected)
-- `GET /my-tasks` - Get tasks assigned to current user array (Protected)
-- `GET /project/:projectId` - Get tasks by project (Protected)
-- `POST /` - Create a new task and fire WebSockets (**Admin Only**)
-- `PUT /:id` - Update a task (**Admin Only**)
-- `DELETE /:id` - Delete a task (**Admin Only**)
-- `PUT /:id/status` - Quick-action status update (**Admin Only**)
-
-### Users (`/api/users`)
-- `GET /` - Get all users (Protected)
+This project is licensed under the [MIT License](./LICENSE).

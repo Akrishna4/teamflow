@@ -1,0 +1,200 @@
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        message:
+          type: string
+          example: Something went wrong
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+        data:
+          type: object
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 100
+        pages:
+          type: integer
+          example: 5
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [Admin, Member]
+        createdAt:
+          type: string
+          format: date-time
+    Project:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        createdBy:
+          $ref: '#/components/schemas/User'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        createdAt:
+          type: string
+          format: date-time
+    Task:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [To Do, In Progress, Review, Done]
+        priority:
+          type: string
+          enum: [Low, Medium, High, Urgent]
+        project:
+          type: string
+        assignedTo:
+          $ref: '#/components/schemas/User'
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+        dueDate:
+          type: string
+          format: date-time
+    Comment:
+      type: object
+      properties:
+        _id:
+          type: string
+        content:
+          type: string
+        author:
+          $ref: '#/components/schemas/User'
+        task:
+          type: string
+        edited:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    Checklist:
+      type: object
+      properties:
+        _id:
+          type: string
+        title:
+          type: string
+        task:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChecklistItem'
+    ChecklistItem:
+      type: object
+      properties:
+        _id:
+          type: string
+        text:
+          type: string
+        completed:
+          type: boolean
+    Label:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+          example: '#ff0000'
+        project:
+          type: string
+    Attachment:
+      type: object
+      properties:
+        _id:
+          type: string
+        filename:
+          type: string
+        originalName:
+          type: string
+        mimeType:
+          type: string
+        size:
+          type: integer
+        url:
+          type: string
+    Activity:
+      type: object
+      properties:
+        _id:
+          type: string
+        action:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        project:
+          type: string
+        metadata:
+          type: object
+    SavedView:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        project:
+          type: string
+        user:
+          type: string
+        filters:
+          type: object
+        sort:
+          type: string
+        isDefault:
+          type: boolean

@@ -28,6 +28,10 @@ const userSchema = new mongoose.Schema(
         ref: "Project",
       },
     ],
+    onboardingSeeded: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

@@ -28,6 +28,10 @@ const taskSchema = new mongoose.Schema(
       ref: "Project",
       required: true,
     },
+    labels: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Label",
+    }],
     assignedTo: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -37,8 +41,18 @@ const taskSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    estimatedEffort: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
+
+// Indexes for Dashboard and Search
+taskSchema.index({ assignedTo: 1, status: 1, updatedAt: -1 });
+taskSchema.index({ assignedTo: 1, dueDate: 1 });
+taskSchema.index({ project: 1 });
+taskSchema.index({ title: "text", description: "text" });
 
 module.exports = mongoose.model("Task", taskSchema);

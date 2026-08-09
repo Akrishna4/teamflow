@@ -1,168 +1,223 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import axios from 'axios';
-import { X, Calendar, Flag, CheckSquare, Clock } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
+import { X } from 'lucide-react';
+import { AuthContext } from "../context/AuthContext";
+import { SocketContext } from "../context/SocketContext";
+import Tabs from './ui/Tabs';
+import TaskView from './task/TaskView';
+import TaskForm from './task/TaskForm';
+import TaskActions from './task/TaskActions';
+import TaskComments from './task/TaskComments';
+import TaskChecklists from './task/TaskChecklists';
+import TaskAttachments from './task/TaskAttachments';
+import TaskHistory from './task/TaskHistory';
 
-export default function TaskDetailsModal({ taskId, isOpen, onClose, onTaskUpdated }) {
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'checklists', label: 'Checklists' },
+  { id: 'attachments', label: 'Attachments' },
+  { id: 'comments', label: 'Comments' },
+  { id: 'history', label: 'History' },
+];
+
+export default function TaskDetailsModal({
+  task,
+  users = [],
+  projects = [],
+  isOpen,
+  onClose,
+  onUpdate,
+  onDuplicate,
+  onDeleteRequest,
+}) {
   const { user } = useContext(AuthContext);
-  const [task, setTask] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const socket = useContext(SocketContext); // SocketContext value IS the socket instance
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastCommentEvent, setLastCommentEvent] = useState(null);
+  const [lastChecklistEvent, setLastChecklistEvent] = useState(null);
+  const [lastLabelEvent, setLastLabelEvent] = useState(null);
+  const [lastAttachmentEvent, setLastAttachmentEvent] = useState(null);
+  const [lastHistoryEvent, setLastHistoryEvent] = useState(null);
 
+  const isAdmin = user?.role === 'Admin';
+
+  // Reset state when the task changes or modal opens
   useEffect(() => {
-    if (!isOpen || !taskId) return;
-    
-    const fetchTask = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get(`/tasks/${taskId}`);
-        setTask(res.data.task);
-      } catch (error) {
-        console.error("Failed to fetch task details", error);
-      } finally {
-        setLoading(false);
-      }
+    if (!isOpen) return;
+    setActiveTab('overview');
+    setIsEditing(false);
+  }, [isOpen, task?._id]);
+
+  // Forward socket comment events to the TaskComments child
+  useEffect(() => {
+    if (!socket || !task) return;
+
+    const handleCommentEvent = (eventName) => (payload) => {
+      // Only care about events for THIS task
+      const payloadTaskId = payload?.task || payload?.task?._id;
+      if (payloadTaskId && payloadTaskId !== task._id) return;
+      setLastCommentEvent({ event: eventName, payload, ts: Date.now() });
     };
-    fetchTask();
-  }, [taskId, isOpen]);
+
+    const handleChecklistEvent = (eventName) => (payload) => {
+      const payloadTaskId = payload?.task || payload?.task?._id || payload?.checklist?.task;
+      if (payloadTaskId && payloadTaskId !== task._id) return;
+      setLastChecklistEvent({ event: eventName, payload, ts: Date.now() });
+    };
+
+    const handleLabelEvent = (eventName) => (payload) => {
+      // label events are not scoped to a specific task, they are project-wide
+      // except when task.updated is fired which handles assignment
+      setLastLabelEvent({ event: eventName, payload, ts: Date.now() });
+    };
+
+    const handleAttachmentEvent = (eventName) => (payload) => {
+      const payloadTaskId = payload?.task || payload?.task?._id || payload?.taskId;
+      if (payloadTaskId && payloadTaskId !== task._id) return;
+      setLastAttachmentEvent({ event: eventName, payload, ts: Date.now() });
+    };
+
+    const handleHistoryEvent = (eventName) => (payload) => {
+      const payloadTaskId = payload?.entityId || payload?.taskId;
+      if (payloadTaskId && payloadTaskId !== task._id) return;
+      setLastHistoryEvent({ event: eventName, payload, ts: Date.now(), taskId: payloadTaskId });
+    };
+
+    const handlers = {
+      'comment.created': handleCommentEvent('comment.created'),
+      'comment.updated': handleCommentEvent('comment.updated'),
+      'comment.deleted': handleCommentEvent('comment.deleted'),
+      'checklist.created': handleChecklistEvent('checklist.created'),
+      'checklist.updated': handleChecklistEvent('checklist.updated'),
+      'checklist.deleted': handleChecklistEvent('checklist.deleted'),
+      'checklist_item.created': handleChecklistEvent('checklist_item.created'),
+      'checklist_item.updated': handleChecklistEvent('checklist_item.updated'),
+      'checklist_item.deleted': handleChecklistEvent('checklist_item.deleted'),
+      'label.created': handleLabelEvent('label.created'),
+      'label.updated': handleLabelEvent('label.updated'),
+      'label.deleted': handleLabelEvent('label.deleted'),
+      'attachment.uploaded': handleAttachmentEvent('attachment.uploaded'),
+      'attachment.deleted': handleAttachmentEvent('attachment.deleted'),
+      'history.created': handleHistoryEvent('history.created'),
+    };
+
+    Object.entries(handlers).forEach(([ev, fn]) => socket.on(ev, fn));
+    return () => {
+      Object.entries(handlers).forEach(([ev, fn]) => socket.off(ev, fn));
+    };
+  }, [socket, task?._id]);
+
+  if (!isOpen || !task) return null;
 
   const handleStatusChange = async (newStatus) => {
-    setIsUpdating(true);
+    setIsSubmitting(true);
     try {
-      await axios.put(`/tasks/${taskId}`, { status: newStatus });
-      setTask({ ...task, status: newStatus });
-      if (onTaskUpdated) onTaskUpdated();
-    } catch (error) {
-      console.error("Failed to update status", error);
+      // Use the /status endpoint which is open to all authenticated users,
+      // not /tasks/:id which is Admin-only for full edits.
+      await axios.put(`/tasks/${task._id}/status`, { status: newStatus });
+      // Notify parent to apply optimistic update (the socket will also reconcile)
+      onUpdate(task._id, { status: newStatus });
+    } catch (err) {
+      // Surface the error to the console; the socket will reconcile state
+      // eslint-disable-next-line no-console
+      console.error('Failed to update task status:', err?.response?.data || err.message);
     } finally {
-      setIsUpdating(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (!isOpen) return null;
+  const handleFormSubmit = async (formData) => {
+    setIsSubmitting(true);
+    await onUpdate(task._id, formData);
+    setIsSubmitting(false);
+    setIsEditing(false);
+  };
+
+  const handleClose = () => {
+    setIsEditing(false);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-        
-        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-          <h2 className="text-xl font-bold text-slate-900">Task Details</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-rose-500 transition-colors p-1 rounded-full hover:bg-rose-50">
-            <X className="w-6 h-6" />
-          </button>
+
+        {/* Header */}
+        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex-shrink-0">
+          <h2 className="text-xl font-bold text-slate-900">
+            {isEditing ? 'Edit Task' : 'Task Details'}
+          </h2>
+          <div className="flex items-center space-x-4">
+            {!isEditing && isAdmin && (
+              <TaskActions
+                onEdit={() => setIsEditing(true)}
+                onDuplicate={() => onDuplicate(task._id)}
+                onDelete={() => onDeleteRequest(task)}
+                isDuplicating={isSubmitting}
+              />
+            )}
+            <button
+              onClick={handleClose}
+              className="text-slate-400 hover:text-rose-500 transition-colors p-1 rounded-full hover:bg-rose-50"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
-        
-        <div className="p-8 overflow-y-auto">
-          {loading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            </div>
-          ) : task ? (
-            <div className="space-y-8">
-              {/* Header Area */}
-              <div>
-                <div className="flex items-center space-x-4 mb-4">
-                  {/* Interactive Status Dropdown */}
-                  <div className="flex items-center">
-                    <select
-                      value={task.status}
-                      onChange={(e) => handleStatusChange(e.target.value)}
-                      disabled={isUpdating || user?.role !== 'Admin'}
-                      className={`appearance-none cursor-pointer pl-3 pr-8 py-1 text-xs leading-5 font-bold rounded-full border shadow-sm outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                        task.status === 'Done' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
-                        task.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                        'bg-slate-100 text-slate-700 border-slate-200'
-                      } ${isUpdating || user?.role !== 'Admin' ? 'opacity-70 cursor-not-allowed' : ''}`}
-                      style={{
-                        backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                        backgroundPosition: `right 0.25rem center`,
-                        backgroundRepeat: `no-repeat`,
-                        backgroundSize: `1.5em 1.5em`
-                      }}
-                    >
-                      <option value="To Do">To Do</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Done">Done</option>
-                    </select>
-                  </div>
 
-                  <span className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border shadow-sm
-                    ${task.priority === 'High' ? 'bg-rose-50 text-rose-700 border-rose-200' : 
-                      task.priority === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
-                      'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-                    {task.priority} Priority
-                  </span>
-                </div>
-                <h1 className="text-2xl font-bold text-slate-900">{task.title}</h1>
-              </div>
+        {/* Tabs — only shown in view mode */}
+        {!isEditing && (
+          <div className="px-6 flex-shrink-0">
+            <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+          </div>
+        )}
 
-              {/* Description */}
-              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
-                <h3 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider">Description</h3>
-                <p className="text-slate-600 whitespace-pre-wrap">
-                  {task.description || <span className="italic text-slate-400">No description provided.</span>}
-                </p>
-              </div>
-
-              {/* Meta Grid */}
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider flex items-center">
-                    <Flag className="w-4 h-4 mr-1.5 text-blue-500" /> Project
-                  </h3>
-                  <p className="text-slate-900 font-medium">{task.project?.name || 'N/A'}</p>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider flex items-center">
-                    <CheckSquare className="w-4 h-4 mr-1.5 text-blue-500" /> Assignees
-                  </h3>
-                  <div className="flex flex-col space-y-2">
-                    {task.assignedTo && task.assignedTo.length > 0 ? (
-                      task.assignedTo.map(assignee => (
-                        <div key={assignee._id} className="flex items-center bg-slate-50 border border-slate-100 rounded-lg p-2 w-fit pr-4">
-                          <div className="h-6 w-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs mr-2 shadow-sm">
-                            {assignee.name.charAt(0)}
-                          </div>
-                          <span className="text-slate-900 font-medium text-sm">{assignee.name}</span>
-                          <span className="text-slate-400 text-xs ml-2">({assignee.role})</span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-slate-500 italic text-sm">Unassigned</span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider flex items-center">
-                    <Calendar className="w-4 h-4 mr-1.5 text-blue-500" /> Created By
-                  </h3>
-                  <p className="text-slate-900 font-medium">{task.createdBy?.name || 'System'}</p>
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider flex items-center">
-                    <Clock className="w-4 h-4 mr-1.5 text-blue-500" /> Created On
-                  </h3>
-                  <p className="text-slate-900 font-medium">{new Date(task.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
-            </div>
+        {/* Body */}
+        <div className="p-6 overflow-y-auto flex-1">
+          {isEditing ? (
+            <TaskForm
+              task={task}
+              users={users}
+              projects={projects}
+              onSubmit={handleFormSubmit}
+              onCancel={() => setIsEditing(false)}
+              isSubmitting={isSubmitting}
+            />
+          ) : activeTab === 'overview' ? (
+            <TaskView
+              task={task}
+              isUpdating={isSubmitting}
+              onStatusChange={handleStatusChange}
+              isAdmin={isAdmin}
+              newLabelEvent={lastLabelEvent}
+            />
+          ) : activeTab === 'checklists' ? (
+            <TaskChecklists
+              taskId={task._id}
+              projectId={task.project?._id || task.project}
+              newChecklistEvent={lastChecklistEvent}
+            />
+          ) : activeTab === 'attachments' ? (
+            <TaskAttachments
+              taskId={task._id}
+              projectId={task.project?._id || task.project}
+              newAttachmentEvent={lastAttachmentEvent}
+            />
+          ) : activeTab === 'history' ? (
+            <TaskHistory
+              taskId={task._id}
+              newHistoryEvent={lastHistoryEvent}
+            />
           ) : (
-            <div className="text-center py-12 text-rose-500">Failed to load task details.</div>
+            <TaskComments
+              taskId={task._id}
+              projectId={task.project?._id || task.project}
+              newCommentEvent={lastCommentEvent}
+            />
           )}
         </div>
-        
-        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-6 py-2.5 text-sm font-bold text-white bg-blue-500 hover:bg-blue-600 rounded-xl shadow-md shadow-blue-500/20 transition-all hover:-translate-y-0.5"
-          >
-            Close
-          </button>
-        </div>
-
       </div>
     </div>
   );

@@ -1,40 +1,45 @@
-const Notification = require("../models/Notification");
+const NotificationService = require("../services/notification/notification.service");
+const ActivityService = require("../services/activity/activity.service");
+const EVENTS = require("../constants/socketEvents");
 
-exports.getMyNotifications = async (req, res) => {
+exports.getMyNotifications = async (req, res, next) => {
   try {
-    const notifications = await Notification.find({ user: req.user._id })
-      .sort({ createdAt: -1 })
-      .limit(50); // Fetch latest 50
+    const notifications = await NotificationService.getByUser(req.user._id);
     res.status(200).json({ notifications });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
-exports.markAsRead = async (req, res) => {
+exports.markAsRead = async (req, res, next) => {
   try {
-    const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
-      { isRead: true },
-      { new: true }
+    const notification = await NotificationService.markAsRead(
+      req.params.id,
+      req.user._id
     );
+
     if (!notification) {
       return res.status(404).json({ message: "Notification not found" });
     }
+
+    ActivityService.log({
+      action: EVENTS.NOTIFICATION_READ,
+      entityModel: "Notification",
+      entityId: notification._id,
+      user: req.user._id,
+    });
+
     res.status(200).json({ notification });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
-exports.markAllAsRead = async (req, res) => {
+exports.markAllAsRead = async (req, res, next) => {
   try {
-    await Notification.updateMany(
-      { user: req.user._id, isRead: false },
-      { isRead: true }
-    );
-    res.status(200).json({ message: "All marked as read" });
+    await NotificationService.markAllAsRead(req.user._id);
+    res.status(200).json({ message: "All notifications marked as read." });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };

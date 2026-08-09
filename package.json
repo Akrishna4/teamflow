@@ -1,0 +1,25 @@
+{
+  "name": "teamflow",
+  "version": "1.0.0",
+  "description": "TeamFlow is a full-stack, production-ready MERN web application engineered for collaborative teams. It features strict Role-Based Access Control (RBAC), real-time WebSocket notifications, dynamic multi-user assignments, and a highly responsive Kanban-style dashboard.",
+  "main": "index.js",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test": "npm run test:e2e"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Akrishna4/teamflow.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Akrishna4/teamflow/issues"
+  },
+  "homepage": "https://github.com/Akrishna4/teamflow#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}

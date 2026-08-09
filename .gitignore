@@ -7,17 +7,29 @@ yarn-error.log*
 
 # Dependencies
 node_modules/
-
-# Server
-server/.env
 server/node_modules/
-
-# Client
 client/node_modules/
-client/dist/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+server/.env
 client/.env
-client/.env.local
+
+# Build Artifacts & Coverage
+client/dist/
+build/
+coverage/
+.nyc_output/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
 *.pem
+Thumbs.db

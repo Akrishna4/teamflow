@@ -1,0 +1,106 @@
+name: Continuous Delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - staging
+          - production
+      version_tag:
+        description: 'Docker Image Tag (e.g., v1.0.0)'
+        required: true
+        default: 'latest'
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ github.event.inputs.version_tag }}
+            type=raw,value=latest,enable=${{ github.event.inputs.environment == 'production' }}
+
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Extract metadata (tags, labels) for Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ github.event.inputs.version_tag }}
+            type=raw,value=latest,enable=${{ github.event.inputs.environment == 'production' }}
+
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
+
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment:
+      name: ${{ github.event.inputs.environment }}
+      
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      # Placeholder for actual deployment logic (e.g., SSH, Helm, ECS, or Vercel/Render)
+      - name: Deploy Infrastructure
+        run: |
+          echo "Deploying version ${{ github.event.inputs.version_tag }} to ${{ github.event.inputs.environment }} environment..."
+          echo "Image tags pushed:"
+          echo " - ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.event.inputs.version_tag }}"
+          echo " - ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.event.inputs.version_tag }}"
+          
+          # Example deployment command (commented out):
+          # ssh user@server "docker-compose pull && docker-compose up -d"

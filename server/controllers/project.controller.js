@@ -1,86 +1,97 @@
-const Project = require("../models/Project");
-const User = require("../models/User");
+const ProjectService = require("../services/project/project.service");
+const ProjectSocket = require("../services/project/project.socket");
+const CascadeService = require("../services/cascade/cascade.service");
+const ActivityService = require("../services/activity/activity.service");
+const EVENTS = require("../constants/socketEvents");
 
-exports.getAllProjects = async (req, res) => {
+/**
+ * GET /api/projects
+ */
+exports.getAllProjects = async (req, res, next) => {
   try {
-    const projects = await Project.find()
-      .populate("members", "name email role")
-      .populate("createdBy", "name email")
-      .populate("tasks");
+    const projects = await ProjectService.getAll();
     res.status(200).json({ projects });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
-exports.getProject = async (req, res) => {
+/**
+ * GET /api/projects/:id
+ */
+exports.getProject = async (req, res, next) => {
   try {
-    const project = await Project.findById(req.params.id)
-      .populate("members", "name email role")
-      .populate("createdBy", "name email")
-      .populate("tasks");
-    
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-    
+    const project = await ProjectService.getById(req.params.id);
     res.status(200).json({ project });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
-exports.createProject = async (req, res) => {
+/**
+ * POST /api/projects  [Admin only]
+ */
+exports.createProject = async (req, res, next) => {
   try {
-    const { name, description, members } = req.body;
+    const project = await ProjectService.create(req.body, req.user._id);
 
-    const project = await Project.create({
-      name,
-      description,
-      members: members || [],
-      createdBy: req.user._id,
+    ProjectSocket.emitCreated(req.io, project);
+    ActivityService.log({
+      action: EVENTS.PROJECT_CREATED,
+      entityModel: "Project",
+      entityId: project._id,
+      user: req.user._id,
+      metadata: { name: project.name },
     });
-
-    if (members && members.length > 0) {
-      await User.updateMany(
-        { _id: { $in: members } },
-        { $push: { projects: project._id } }
-      );
-    }
 
     res.status(201).json({ project });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
-exports.updateProject = async (req, res) => {
+/**
+ * PUT /api/projects/:id  [Admin only]
+ */
+exports.updateProject = async (req, res, next) => {
   try {
-    const project = await Project.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    }).populate("members", "name email role");
+    const project = await ProjectService.update(req.params.id, req.body);
 
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    ProjectSocket.emitUpdated(req.io, project);
+    ActivityService.log({
+      action: EVENTS.PROJECT_UPDATED,
+      entityModel: "Project",
+      entityId: project._id,
+      user: req.user._id,
+      metadata: { updates: Object.keys(req.body) },
+    });
 
     res.status(200).json({ project });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
-exports.deleteProject = async (req, res) => {
+/**
+ * DELETE /api/projects/:id  [Admin only]
+ */
+exports.deleteProject = async (req, res, next) => {
   try {
-    const project = await Project.findByIdAndDelete(req.params.id);
+    const project = await CascadeService.deleteProjectCascade(req.params.id);
 
-    if (!project) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    ProjectSocket.emitDeleted(req.io, req.params.id);
+    ActivityService.log({
+      action: EVENTS.PROJECT_DELETED,
+      entityModel: "Project",
+      entityId: req.params.id, // ID is preserved in log even after deletion
+      user: req.user._id,
+      metadata: { name: project.name },
+    });
 
-    res.status(200).json({ message: "Project deleted successfully" });
+    res.status(200).json({
+      message: "Project and all associated tasks deleted successfully.",
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };

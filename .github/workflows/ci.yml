@@ -1,0 +1,106 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    name: Test and Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install Root Dependencies
+        run: npm ci
+
+      - name: Install Backend Dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Install Frontend Dependencies
+        working-directory: ./client
+        run: npm ci
+
+      - name: Lint Frontend
+        working-directory: ./client
+        run: npm run lint
+        continue-on-error: true # Warning only, let tests determine failure
+
+      - name: Run Backend Tests
+        working-directory: ./server
+        run: npm run test:coverage
+        env:
+          JWT_SECRET: test_secret
+          MONGO_URI: mongodb://localhost:27017/teamflow_test
+
+      - name: Upload Backend Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: server/coverage/
+          retention-days: 7
+
+      - name: Run Frontend Tests
+        working-directory: ./client
+        run: npm run test:coverage
+
+      - name: Upload Frontend Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: client/coverage/
+          retention-days: 7
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright E2E Tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Build Frontend
+        working-directory: ./client
+        run: npm run build
+
+      - name: Verify Backend Docker Build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: false
+          tags: teamflow-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify Frontend Docker Build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          push: false
+          tags: teamflow-frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

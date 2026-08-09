@@ -1,10 +1,15 @@
 const User = require("../models/User");
 
-exports.getAllUsers = async (req, res) => {
+/**
+ * GET /api/users
+ * Returns all users with sensitive fields stripped.
+ * Used in project/task creation forms to list assignable users.
+ */
+exports.getAllUsers = async (req, res, next) => {
   try {
     const users = await User.find().select("-password");
     res.status(200).json({ users });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
