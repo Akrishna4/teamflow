@@ -62,38 +62,52 @@ graph TD
 - Vitest + RTL (Frontend Unit)
 - Playwright (End-to-End)
 
-## Screenshots
+## 📸 Screenshots
 
 <details>
-<summary><b>Login Screen</b></summary>
+<summary><b>🔐 Login Screen</b></summary>
+
 <br>
-![Login Placeholder](./assets/Login-Screen.png)
+
+![Login Screen](./assets/Login-Screen.png)
+
 </details>
 
 <details>
-<summary><b>Dashboard</b></summary>
+<summary><b>📊 Dashboard</b></summary>
+
 <br>
-![Dashboard Placeholder](./assets/dashboard.png)
+
+![Dashboard](./assets/dashboard.png)
+
 </details>
 
 <details>
-<summary><b>Project Details</b></summary>
+<summary><b>📁 Project Details</b></summary>
+
 <br>
+
 ![Project Details](./assets/project-details.png)
+
 </details>
 
 <details>
-<summary><b>Task Details Modal</b></summary>
+<summary><b>📝 Task Details Modal</b></summary>
+
 <br>
-![Task Details Placeholder](./assets/task-details.png)
+
+![Task Details Modal](./assets/task-details.png)
+
 </details>
 
 <details>
-<summary><b>Mobile Responsive View</b></summary>
-<br>
-![Mobile](./assets/mobile.png)
-</details>
+<summary><b>📱 Mobile Responsive View</b></summary>
 
+<br>
+
+![Mobile Responsive View](./assets/mobile.png)
+
+</details>
 ## Folder Structure
 
 ```
