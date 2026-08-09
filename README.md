@@ -1,7 +1,7 @@
 # TeamFlow
 
 <p align="center">
-  <img src="[https://via.placeholder.com/1200x400.png?text=TeamFlow+-+Enterprise+Project+Management](https://chatgpt.com/s/m_6a78d18f332881918c38027827823f97)" alt="TeamFlow Banner">
+  <img src="./assets/teamflow-banner.png" alt="TeamFlow Banner">
 </p>
 
 ## Project Overview
