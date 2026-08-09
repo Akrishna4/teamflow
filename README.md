@@ -67,31 +67,31 @@ graph TD
 <details>
 <summary><b>Login Screen</b></summary>
 <br>
-![Login Placeholder](https://via.placeholder.com/800x450.png?text=Login+Screen)
+![Login Placeholder](./assets/Login-Screen.png)
 </details>
 
 <details>
-<summary><b>My Tasks Dashboard</b></summary>
+<summary><b>Dashboard</b></summary>
 <br>
-![Dashboard Placeholder](https://via.placeholder.com/800x450.png?text=My+Tasks+Dashboard)
+![Dashboard Placeholder](./assets/dashboard.png)
 </details>
 
 <details>
-<summary><b>Project Kanban View</b></summary>
+<summary><b>Project Details</b></summary>
 <br>
-![Project View Placeholder](https://via.placeholder.com/800x450.png?text=Project+View)
+![Project Details](./assets/project-details.png)
 </details>
 
 <details>
 <summary><b>Task Details Modal</b></summary>
 <br>
-![Task Details Placeholder](https://via.placeholder.com/800x450.png?text=Task+Details+Modal)
+![Task Details Placeholder](./assets/task-details.png)
 </details>
 
 <details>
 <summary><b>Mobile Responsive View</b></summary>
 <br>
-![Mobile View Placeholder](https://via.placeholder.com/400x700.png?text=Mobile+View)
+![Mobile](./assets/mobile.png)
 </details>
 
 ## Folder Structure
