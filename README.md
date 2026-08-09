@@ -67,38 +67,47 @@ graph TD
 <details>
 <summary><b>🔐 Login Screen</b></summary>
 
-![Login Screen](assets/Login-Screen.png)
+<p align="center">
+  <img src="assets/Login-Screen.png" alt="Login Screen" width="800"/>
+</p>
 
 </details>
 
 <details>
 <summary><b>📊 Dashboard</b></summary>
 
-![Dashboard](assets/dashboard.png)
+<p align="center">
+  <img src="assets/dashboard.png" alt="Dashboard" width="1000"/>
+</p>
 
 </details>
 
 <details>
 <summary><b>📁 Project Details</b></summary>
 
-![Project Details](assets/project-details.png)
+<p align="center">
+  <img src="assets/project-details.png" alt="Project Details" width="1000"/>
+</p>
 
 </details>
 
 <details>
 <summary><b>📝 Task Details Modal</b></summary>
 
-![Task Details Modal](assets/task-details.png)
+<p align="center">
+  <img src="assets/task-details.png" alt="Task Details Modal" width="700"/>
+</p>
 
 </details>
 
 <details>
 <summary><b>📱 Mobile Responsive View</b></summary>
 
-![Mobile Responsive View](assets/mobile.png)
+<p align="center">
+  <img src="assets/mobile.png" alt="Mobile Responsive View" width="320"/>
+</p>
 
 </details>
-
 
 
 ## Folder Structure
