@@ -1,12 +1,12 @@
 const request = require('supertest');
-const createTestApp = require('../helpers/createTestApp');
+const createTestApp = require('./helpers/createTestApp');
 const {
   connectTestDB,
   clearTestDB,
   disconnectTestDB,
   createTestUser,
   authHeader,
-} = require('../helpers/testHelpers');
+} = require('./helpers/testHelpers');
 
 let app;
 

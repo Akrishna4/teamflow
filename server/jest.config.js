@@ -2,7 +2,7 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.test.js'],
-  setupFilesAfterFramework: [],
+  setupFilesAfterEnv: [],
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
     'controllers/**/*.js',
@@ -12,7 +12,7 @@ module.exports = {
     '!**/node_modules/**',
   ],
   coverageReporters: ['text', 'lcov', 'clover'],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 80,
       functions: 85,

@@ -1,5 +1,5 @@
 const request = require('supertest');
-const createTestApp = require('../helpers/createTestApp');
+const createTestApp = require('./helpers/createTestApp');
 const {
   connectTestDB,
   clearTestDB,
@@ -8,7 +8,7 @@ const {
   createAdminUser,
   createTestProject,
   authHeader,
-} = require('../helpers/testHelpers');
+} = require('./helpers/testHelpers');
 
 let app;
 
@@ -102,7 +102,7 @@ describe('Projects API', () => {
       const res = await request(app)
         .put('/api/projects/000000000000000000000000')
         .set('Authorization', authHeader(token))
-        .send({ name: 'X' });
+        .send({ name: 'Test Project' });
 
       expect(res.status).toBe(404);
     });

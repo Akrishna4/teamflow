@@ -10,6 +10,7 @@ const taskRoutes = require('../../routes/task.routes');
 const userRoutes = require('../../routes/user.routes');
 const errorHandler = require('../../middleware/errorHandler');
 const v1Routes = require('../../api/v1');
+const notificationRoutes = require("../../routes/notification.routes");
 
 function createTestApp() {
   const app = express();
@@ -18,6 +19,7 @@ function createTestApp() {
   // Attach a no-op io mock so controllers that call req.io.to(...).emit() don't crash
   app.use((req, _res, next) => {
     req.io = {
+      emit: () => {},
       to: () => ({ emit: () => {} }),
     };
     next();
@@ -28,6 +30,7 @@ function createTestApp() {
   app.use('/api/tasks', taskRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/v1', v1Routes);
+  app.use("/api/notifications", notificationRoutes);
 
   app.use(errorHandler);
   return app;

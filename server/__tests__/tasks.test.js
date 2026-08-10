@@ -1,5 +1,5 @@
 const request = require('supertest');
-const createTestApp = require('../helpers/createTestApp');
+const createTestApp = require('./helpers/createTestApp');
 const {
   connectTestDB,
   clearTestDB,
@@ -9,7 +9,7 @@ const {
   createTestProject,
   createTestTask,
   authHeader,
-} = require('../helpers/testHelpers');
+} = require('./helpers/testHelpers');
 
 let app;
 
@@ -69,6 +69,119 @@ describe('Tasks API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.tasks.every(t => t.priority === 'High')).toBe(true);
+    });
+
+      describe('Task service edge cases and filters', () => {
+      it('applies multiple project filters correctly', async () => {
+        const { user, token } = await createAdminUser();
+        const project = await createTestProject(user._id);
+
+        await createTestTask(user._id, project._id, {
+          status: 'Done',
+          priority: 'High',
+        });
+
+        await createTestTask(user._id, project._id, {
+          status: 'To Do',
+          priority: 'Low',
+        });
+
+        const res = await request(app)
+          .get(
+            `/api/tasks/project/${project._id}?status=Done&priority=High`
+          )
+          .set('Authorization', authHeader(token));
+
+        expect(res.status).toBe(200);
+        expect(res.body.tasks.length).toBe(1);
+        expect(res.body.tasks[0].status).toBe('Done');
+        expect(res.body.tasks[0].priority).toBe('High');
+      });
+
+      it('filters tasks by due date', async () => {
+        const { user, token } = await createAdminUser();
+        const project = await createTestProject(user._id);
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        await createTestTask(user._id, project._id, {
+          title: 'Overdue Task',
+          dueDate: yesterday,
+        });
+
+        await createTestTask(user._id, project._id, {
+          title: 'Upcoming Task',
+          dueDate: tomorrow,
+        });
+
+        const overdueRes = await request(app)
+          .get(`/api/tasks/project/${project._id}?dueDate=overdue`)
+          .set('Authorization', authHeader(token));
+
+        expect(overdueRes.status).toBe(200);
+        expect(
+          overdueRes.body.tasks.some(t => t.title === 'Overdue Task')
+        ).toBe(true);
+
+        const upcomingRes = await request(app)
+          .get(`/api/tasks/project/${project._id}?dueDate=upcoming`)
+          .set('Authorization', authHeader(token));
+
+        expect(upcomingRes.status).toBe(200);
+        expect(
+          upcomingRes.body.tasks.some(t => t.title === 'Upcoming Task')
+        ).toBe(true);
+      });
+
+      it('filters tasks due today', async () => {
+        const { user, token } = await createAdminUser();
+        const project = await createTestProject(user._id);
+
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+
+        await createTestTask(user._id, project._id, {
+          title: 'Today Task',
+          dueDate: today,
+        });
+
+        const res = await request(app)
+          .get(`/api/tasks/project/${project._id}?dueDate=today`)
+          .set('Authorization', authHeader(token));
+
+        expect(res.status).toBe(200);
+        expect(
+          res.body.tasks.some(t => t.title === 'Today Task')
+        ).toBe(true);
+      });
+
+      it('supports different task sort options', async () => {
+        const { user, token } = await createAdminUser();
+        const project = await createTestProject(user._id);
+
+        await createTestTask(user._id, project._id, {
+          title: 'Low Priority',
+          priority: 'Low',
+        });
+
+        await createTestTask(user._id, project._id, {
+          title: 'High Priority',
+          priority: 'High',
+        });
+
+        const res = await request(app)
+          .get(
+            `/api/tasks/project/${project._id}?sort=priority_desc`
+          )
+          .set('Authorization', authHeader(token));
+
+        expect(res.status).toBe(200);
+        expect(res.body.tasks.length).toBe(2);
+      });
     });
   });
 
@@ -168,6 +281,126 @@ describe('Tasks API', () => {
         .set('Authorization', authHeader(token));
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('Additional Task Controller Coverage', () => {
+    it('returns all tasks for authenticated user', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+
+      await createTestTask(user._id, project._id);
+
+      const res = await request(app)
+        .get('/api/tasks')
+        .set('Authorization', authHeader(token));
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.tasks)).toBe(true);
+      expect(res.body.tasks.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('returns tasks assigned to the current user', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+
+      await createTestTask(user._id, project._id, {
+        assignedTo: [user._id],
+      });
+
+      const res = await request(app)
+        .get('/api/tasks/my-tasks')
+        .set('Authorization', authHeader(token));
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.tasks)).toBe(true);
+    });
+
+    it('returns a single task by id', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+      const task = await createTestTask(user._id, project._id);
+
+      const res = await request(app)
+        .get(`/api/tasks/${task._id}`)
+        .set('Authorization', authHeader(token));
+
+      expect(res.status).toBe(200);
+      expect(res.body.task._id).toBe(task._id.toString());
+    });
+
+    it('returns the task dashboard for the current user', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+
+      await createTestTask(user._id, project._id, {
+        assignedTo: [user._id],
+        status: 'To Do',
+      });
+
+      const res = await request(app)
+        .get('/api/tasks/my/dashboard')
+        .set('Authorization', authHeader(token));
+
+      expect(res.status).toBe(200);
+      expect(res.body).toBeDefined();
+    });
+
+    it('updates task status through the dedicated status endpoint', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+      const task = await createTestTask(user._id, project._id);
+
+      const res = await request(app)
+        .put(`/api/tasks/${task._id}/status`)
+        .set('Authorization', authHeader(token))
+        .send({ status: 'Done' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.task.status).toBe('Done');
+    });
+
+    it('rejects missing status in the dedicated status endpoint', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+      const task = await createTestTask(user._id, project._id);
+
+      const res = await request(app)
+        .put(`/api/tasks/${task._id}/status`)
+        .set('Authorization', authHeader(token))
+        .send({});
+
+      expect(res.status).toBe(400);
+    });
+
+    it('rejects invalid status in the dedicated status endpoint', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+      const task = await createTestTask(user._id, project._id);
+
+      const res = await request(app)
+        .put(`/api/tasks/${task._id}/status`)
+        .set('Authorization', authHeader(token))
+        .send({ status: 'INVALID' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('duplicates an existing task', async () => {
+      const { user, token } = await createAdminUser();
+      const project = await createTestProject(user._id);
+
+      const task = await createTestTask(user._id, project._id, {
+        title: 'Original Task',
+      });
+
+      const res = await request(app)
+        .post(`/api/tasks/${task._id}/duplicate`)
+        .set('Authorization', authHeader(token));
+
+      expect(res.status).toBe(201);
+      expect(res.body.task).toBeDefined();
+      expect(res.body.task._id).not.toBe(task._id.toString());
     });
   });
 });

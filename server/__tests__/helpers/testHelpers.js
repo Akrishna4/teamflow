@@ -7,9 +7,9 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const User = require('../models/User');
-const Project = require('../models/Project');
-const Task = require('../models/Task');
+const User = require('../../models/User');
+const Project = require('../../models/Project');
+const Task = require('../../models/Task');
 
 let mongoServer;
 
